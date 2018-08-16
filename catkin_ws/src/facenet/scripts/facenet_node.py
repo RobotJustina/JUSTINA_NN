@@ -18,22 +18,6 @@ import tensorflow as tf
 import align.detect_face
 import numpy as np
 
-def facenet_align(cv_image):
-    print("facnet align function")
-    minsize = 20 # minimum size of face
-    threshold = [0.6, 0.7, 0.7] # three step's threshold
-    factor = 0.709 # scale factor
-
-    imarray = np.asarray(cv_image)
-    
-    #with tf.Graph().as_default():
-    #    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)
-    #    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False)) as sess:
-     #       pnet, rnet, onet = align.detect_face.create_mtcnn(sess, None) 
-                        
-    bounding_boxes, _ = align.detect_face.detect_face(imarray, minsize, pnet, rnet, onet, threshold, factor)
-
-
 def imageCallback(data):
     try:
         cv_image = bridge.imgmsg_to_cv2(data, "bgr8")
@@ -45,13 +29,29 @@ def imageCallback(data):
     cv2.imshow("Image", cv_image)
     cv2.waitKey(3)
 
+
+def facenet_align(cv_image):
+    #print("facnet align function")
+    minsize = 20 # minimum size of face
+    threshold = [0.6, 0.7, 0.7] # three step's threshold
+    factor = 0.709 # scale factor
+
+    imarray = np.asarray(cv_image)
+    
+    bounding_boxes, _ = align.detect_face.detect_face(imarray, minsize, pnet, rnet, onet, threshold, factor)
+
+    nrof_faces = bounding_boxes.shape[0]
+    if nrof_faces>0:
+        print ("Faces detected:" + str(nrof_faces))
+
+
 def main(args):
     rospy.init_node('image_converter', anonymous=True)
-    rospy.Subscriber("/usb_cam/image_raw", Image, imageCallback)
     rate = rospy.Rate(3) #30Hz
 
     global bridge
     global gpu_memory_fraction
+    global gpu_options
     global pnet
     global rnet
     global onet
@@ -59,10 +59,18 @@ def main(args):
     bridge = CvBridge()
     gpu_memory_fraction = args.gpu_memory_fraction
         
+    #with tf.Graph().as_default():
+    #    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)
+    #    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False)) as sess:
+    #        pnet, rnet, onet = align.detect_face.create_mtcnn(sess, None) 
+
     with tf.Graph().as_default():
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)
-        with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False)) as sess:
-            pnet, rnet, onet = align.detect_face.create_mtcnn(sess, None) 
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+        with sess.as_default():
+            pnet, rnet, onet = align.detect_face.create_mtcnn(sess, None)
+    
+    rospy.Subscriber("/usb_cam/image_raw", Image, imageCallback)
      
     while not rospy.is_shutdown():
         rate.sleep()

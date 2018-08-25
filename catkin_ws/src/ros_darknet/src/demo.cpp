@@ -94,14 +94,14 @@ void YoloObjectDetector::init()
 
   // Path to weights file.
   nodeHandle_.param("yolo_model/weight_file/name", weightsModel,
-                    std::string("yolov2-tiny.weights"));
-  nodeHandle_.param("weights_path", weightsPath, std::string("/home/biorobotica/docker_volumen/JustinaNN/catkin_ws/src/ros_darknet/yolo_network_config/weights"));
+                    std::string("yolov3.weights"));
+  nodeHandle_.param("weights_path", weightsPath, std::string("/home/biorobotica/darknet"));
   weightsPath += "/" + weightsModel;
   weights = new char[weightsPath.length() + 1];
   strcpy(weights, weightsPath.c_str());
 
   // Path to config file.
-  nodeHandle_.param("yolo_model/config_file/name", configModel, std::string("yolov2-tiny.cfg"));
+  nodeHandle_.param("yolo_model/config_file/name", configModel, std::string("yolov3.cfg"));
   nodeHandle_.param("config_path", configPath, std::string("/home/biorobotica/darknet/cfg"));
   configPath += "/" + configModel;
   cfg = new char[configPath.length() + 1];
@@ -154,7 +154,7 @@ void YoloObjectDetector::init()
   nodeHandle_.param("publishers/detection_image/queue_size", detectionImageQueueSize, 1);
   nodeHandle_.param("publishers/detection_image/latch", detectionImageLatch, true);
 
-  imageSubscriber_ = imageTransport_.subscribe("/usb_cam/image_raw", cameraQueueSize,
+  imageSubscriber_ = imageTransport_.subscribe(cameraTopicName, cameraQueueSize,
                                                &YoloObjectDetector::cameraCallback, this);
   objectPublisher_ = nodeHandle_.advertise<std_msgs::Int8>(objectDetectorTopicName,
                                                            objectDetectorQueueSize,
@@ -187,6 +187,7 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg)
   try {
     cam_image = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
     imageHeader_ = msg->header;
+    cv::imshow("Image Reciving", cam_image->image);
   } catch (cv_bridge::Exception& e) {
     ROS_ERROR("cv_bridge exception: %s", e.what());
     return;
@@ -195,14 +196,14 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg)
   if (cam_image) {
     {
       boost::unique_lock<boost::shared_mutex> lockImageCallback(mutexImageCallback_);
-      camImageCopy_ = cam_image->image.clone();
+      //camImageCopy_ = cam_image->image.clone();
     }
     {
-      boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
-      imageStatus_ = true;
+      //boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
+      //imageStatus_ = true;
     }
-    frameWidth_ = cam_image->image.size().width;
-    frameHeight_ = cam_image->image.size().height;
+    //frameWidth_ = cam_image->image.size().width;
+    //frameHeight_ = cam_image->image.size().height;
   }
   return;
 }

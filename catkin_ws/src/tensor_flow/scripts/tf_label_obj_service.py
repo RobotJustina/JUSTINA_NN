@@ -23,7 +23,7 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
-import sys
+import sys, os
 import rospy
 import cv2
 from tensor_flow.srv import *
@@ -94,6 +94,8 @@ def load_labels(label_file):
   return label
 
 def callbackImageLabel(req):
+  global graph, labels, input_operation, output_operation 
+
   bridge =CvBridge()
   try:
       cv_image = bridge.imgmsg_to_cv2(req.image, "bgr8")
@@ -102,18 +104,12 @@ def callbackImageLabel(req):
   #cv2.imshow("Image window", cv_image)
   #cv2.waitKey(3)
 
-  #file_name = "tensorflow/examples/label_image/data/grace_hopper.jpg"
-  model_file = \
-    "/home/biorobotica/docker_volumen/JUSTINA/catkin_ws/src/tensor_flow/graph/output_graph.pb"
-  label_file = "/home/biorobotica/docker_volumen/JUSTINA/catkin_ws/src/tensor_flow/graph/output_labels.txt"
   input_height = 299
   input_width = 299
   input_mean = 0
   input_std = 255
-  input_layer = "Placeholder"
-  output_layer = "final_result"
-  
-  graph = load_graph(model_file)
+  #input_layer = "Placeholder"
+  #output_layer = "final_result"
   
   t = read_tensor_with_opencv(
           cv_image,
@@ -123,10 +119,10 @@ def callbackImageLabel(req):
           input_std=input_std)
   print ("test")
   
-  input_name = "import/" + input_layer
-  output_name = "import/" + output_layer
-  input_operation = graph.get_operation_by_name(input_name)
-  output_operation = graph.get_operation_by_name(output_name)
+  #input_name = "import/" + input_layer
+  #output_name = "import/" + output_layer
+  #input_operation = graph.get_operation_by_name(input_name)
+  #output_operation = graph.get_operation_by_name(output_name)
 
   with tf.Session(graph=graph) as sess:
     results = sess.run(output_operation.outputs[0], {
@@ -134,20 +130,37 @@ def callbackImageLabel(req):
     })
   results = np.squeeze(results)
 
-  top_k = results.argsort()[-2:][::-1] #[::-1]=decreasing order
-  labels = load_labels(label_file)
+  top_k = results.argsort()[-5:][::-1] #[::-1]=decreasing order, [-5:]=only the first 5 elements
   for i in top_k:
     print(labels[i], results[i])
 
-  print(top_k)
+  #print(top_k)
 
   return image_srvResponse(labels[top_k[0]])
 
 
 if __name__ == "__main__":
+  global graph, labels, input_operation, output_operation 
+
   rospy.init_node('tensor_flow')
 
   rospy.Service('/tensor_flow/image', image_srv, callbackImageLabel)
+  
+  filePath = os.path.dirname(os.path.abspath(__file__))
+  file_path_h, file_path_t = os.path.split(filePath)
+
+  model_file = file_path_h + "/graph/output_graph.pb"
+  label_file = file_path_h + "/graph/output_labels.txt"
+  input_layer = "Placeholder"
+  output_layer = "final_result"
+
+  graph = load_graph(model_file)
+  labels = load_labels(label_file)
+  
+  input_name = "import/" + input_layer
+  output_name = "import/" + output_layer
+  input_operation = graph.get_operation_by_name(input_name)
+  output_operation = graph.get_operation_by_name(output_name)
 
   rospy.spin()
 

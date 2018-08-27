@@ -224,13 +224,13 @@ def main(args):
         img = rospy.wait_for_message("/usb_cam/image_raw/compressed", CompressedImage)
         img_np_arr = np.fromstring(img.data, np.uint8)
         encoded_img = cv2.imdecode(img_np_arr, 1)
-        flipped_img = cv2.flip(encoded_img, 1)
+        #flipped_img = cv2.flip(encoded_img, 1)
         with facenetGraph.as_default():
             with face_recognition.encoder.sess.as_default():
-                faces = face_recognition.identify(flipped_img)
-        add_overlays(flipped_img, faces)
+                faces = face_recognition.identify(encoded_img)
+        add_overlays(encoded_img, faces)
        
-        cv2.imshow('Face Recognition', flipped_img)
+        cv2.imshow('Face Recognition', encoded_img)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

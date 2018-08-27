@@ -1,11 +1,11 @@
 <launch>
 	<node name="facenet" pkg="facenet" type="facenet_node.py" output="screen">
-		<param name="model_file" value="/home/biorobotica/docker_volumen/facenet/models/20180402-114759" />
-		<param name="classifier_file" value="/home/biorobotica/docker_volumen/facenet/models/biorobotica_classifier.pkl" />
+		<param name="model_file" value="/home/biorobotica/docker_volumen/facenet_models/20180402-114759/" />
+		<param name="classifier_file" value="/home/biorobotica/docker_volumen/facenet_models/biorobotica_classifier.pkl" />
 		<param name="image_size" value="160"/>
-		<param name="margin" value="0"/>
+		<param name="margin" value="32"/>
 		<param name="gpu_memory_fraction" value="0.25"/>
 		<param name="detect_multiple_faces" value="true"/>
-		<param name="batch_size" value="20"/>
+		<param name="threshold_reco" value="0.9"/>
 	</node>
 </launch>

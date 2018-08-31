@@ -2,6 +2,7 @@
 
 import sys
 import rospy
+import rosgraph
 import cv2
 from std_msgs.msg import Header
 from std_msgs.msg import String
@@ -256,21 +257,28 @@ def main(args):
 
     #rospy.Subscriber("/usb_cam/image_raw/compressed", CompressedImage, compressed_image_callback, queue_size=1)
                                                                                                                                  
-    while not rospy.is_shutdown():
+    while not rospy.is_shutdown() and rosgraph.is_master_online():
         print("Waiting for image\n")
-        img = rospy.wait_for_message("/usb_cam/image_raw/compressed", CompressedImage)
-        img_np_arr = np.fromstring(img.data, np.uint8)
-        encoded_img = cv2.imdecode(img_np_arr, 1)
-        flipped_img = cv2.flip(encoded_img, 1)
-        with facenetGraph.as_default():
-            with face_recognition.encoder.sess.as_default():
-                faces = face_recognition.identify(encoded_img)
-        add_overlays(encoded_img, faces)
+        try:
+            img = rospy.wait_for_message("/usb_cam/image_raw/compressed", CompressedImage, timeout=1)
+            img_np_arr = np.fromstring(img.data, np.uint8)
+            encoded_img = cv2.imdecode(img_np_arr, 1)
+            flipped_img = cv2.flip(encoded_img, 1)
+            with facenetGraph.as_default():
+                with face_recognition.encoder.sess.as_default():
+                    faces = face_recognition.identify(encoded_img)
+            add_overlays(encoded_img, faces)
        
-        cv2.imshow('Face Recognition', encoded_img)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            cv2.imshow('Face Recognition', encoded_img)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
         
+        except rospy.ROSException as e:
+            if 'timeout exceeded' in e.message:
+                continue  # no new waypoint within timeout, looping...
+            else:
+                raise e
+
         rate.sleep()
 
 if __name__ == '__main__':

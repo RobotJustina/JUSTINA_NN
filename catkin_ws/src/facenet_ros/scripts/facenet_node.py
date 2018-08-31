@@ -3,10 +3,14 @@
 import sys
 import rospy
 import cv2
+from std_msgs.msg import Header
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
+from geometry_msgs.msg import Point
 from cv_bridge import CvBridge, CvBridgeError
+from facenet_ros.msg import *
+from facenet_ros.srv import *
 
 from scipy import misc
 import os
@@ -159,6 +163,37 @@ def add_overlays(frame, faces):
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0),
                             thickness=1, lineType=1)
 
+def face_recognition_callback(req):
+    h = std_msgs.msg.Header()
+    h.stamp = rospy.Time.now()
+    with facenetGraph.as_default():
+        with face_recognition.encoder.sess.as_default():
+            try:
+                cv_image = bridge.imgmsg_to_cv2(req.imageBGR, "bgr8")
+            except CvBridgeError as e:
+                print(e)
+            faces = face_recognition.identify(cv_image)
+    #add_overlays(cv_image, faces)
+    
+    recog_faces = [] 
+    for face in faces:
+        if(req.id == '' or face.name == req.id.replace("_"," ")):
+            face_name = face.name
+            confidence = face.probability
+            if(face.probability <= threshold_reco and req.id == ''):
+                face_name = "Unkown"
+            elif(req.id != '' and face.probability <= threshold_reco):
+                continue
+                
+            bounding_box = [Point(face.bounding_box[0], face.bounding_box[1], 0), Point(face.bounding_box[2], face.bounding_box[3], 0)]
+            face_centroid = Point((face.bounding_box[0] + face.bounding_box[2]) / 2, (face.bounding_box[1] + face.bounding_box[3] / 2), 0)
+            face_class = VisionFaceObject(id=face_name, confidence=confidence, face_centroid=face_centroid, bounding_box=bounding_box)
+            recog_faces.append(face_class);
+
+    #cv2.imshow('Face Recognition', cv_image)
+    #cv2.waitKey(1)
+
+    return FaceRecognitionResponse(VisionFaceObjects(h, recog_faces))
 
 def main(args):
     rospy.init_node('facenet_node', anonymous=True)
@@ -213,6 +248,8 @@ def main(args):
     facenetGraph = tf.Graph()
     with facenetGraph.as_default():
         face_recognition = face.Recognition(facenet_model=model_file, classifier_model=classifier_file, face_crop_size=image_size, threshold=[0.7,0.8,0.8], factor=0.709, face_crop_margin=margin, gpu_memory_fraction=gpu_memory_fraction, detect_multiple_faces=detect_multiple_faces)
+
+    s = rospy.Service('facenet_recognizer/faces', FaceRecognition, face_recognition_callback)
  
     ##rospy.Subscriber("/usb_cam/image_raw", Image, image_callback)
     ##rospy.spin()
@@ -224,14 +261,13 @@ def main(args):
         img = rospy.wait_for_message("/usb_cam/image_raw/compressed", CompressedImage)
         img_np_arr = np.fromstring(img.data, np.uint8)
         encoded_img = cv2.imdecode(img_np_arr, 1)
-        #flipped_img = cv2.flip(encoded_img, 1)
+        flipped_img = cv2.flip(encoded_img, 1)
         with facenetGraph.as_default():
             with face_recognition.encoder.sess.as_default():
                 faces = face_recognition.identify(encoded_img)
         add_overlays(encoded_img, faces)
        
         cv2.imshow('Face Recognition', encoded_img)
-
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         

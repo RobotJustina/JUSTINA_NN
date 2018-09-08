@@ -124,7 +124,7 @@ class Detection:
                 face.image = misc.imresize(cropped, (self.face_crop_size, self.face_crop_size), interp='bilinear')
 
                 faces.append(face)
-        else:
+        elif len(bounding_boxes) > 0:
             img_size = np.asarray(image.shape)[0:2]
             det = bounding_boxes[:,0:4]
             bounding_box_size = (det[:,2] - det[:,0]) * (det[:,3] - det[:,1])

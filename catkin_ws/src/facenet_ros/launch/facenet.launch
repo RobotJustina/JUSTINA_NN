@@ -6,7 +6,7 @@
 			<param name="image_size" value="160"/>
 			<param name="margin" value="32"/>
 			<param name="gpu_memory_fraction" value="0.25"/>
-			<param name="detect_multiple_faces" value="true"/>
+			<param name="detect_multiple_faces" value="false"/>
 			<param name="threshold_reco" value="0.9"/>
 		</node>
 	</group>

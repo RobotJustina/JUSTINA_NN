@@ -2,7 +2,7 @@
 	<group ns="vision">
 		<node name="facenet" pkg="facenet_ros" type="facenet_node.py" output="screen">
 			<param name="model_file" value="$(env HOME)/docker_volumen/facenet_models/20180402-114759/" />
-			<param name="classifier_file" value="$(env HOME)/docker_volumen/facenet_models/pre_iros_184_classifier.pkl" />
+			<param name="classifier_file" value="$(env HOME)/docker_volumen/facenet_models/pre_iros_classifier.pkl" />
 			<param name="image_size" value="160"/>
 			<param name="margin" value="32"/>
 			<param name="gpu_memory_fraction" value="0.25"/>

@@ -182,7 +182,7 @@ def face_recognition_callback(req):
             face_name = face.name
             confidence = face.probability
             if(face.probability <= threshold_reco and req.id == ''):
-                face_name = "Unkown"
+                face_name = "Unknown"
             elif(req.id != '' and face.probability <= threshold_reco):
                 continue
                 

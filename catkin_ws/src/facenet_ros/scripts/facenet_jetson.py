@@ -124,7 +124,7 @@ def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_file', type=str, 
         help='Could be either a directory containing the model_file and ckpt_file or a model protobuf (.pb) file')
-    parser.add_argument('classifier_file', type=str,
+    parser.add_argument('--classifier_file', type=str,
         help='Classifier model file name as a pickle (.pkl) file.)')
     parser.add_argument('--image_size', type=int,
         help='Image size (height, width) in pixels.', default=160)
@@ -134,7 +134,7 @@ def parse_arguments(argv):
         help='Upper bound on the amount of GPU memory that will be used by the process.', default=1.0)
     parser.add_argument('--detect_multiple_faces', type=bool,
         help='Detect and align multiple faces per image.', default=False)
-    parser.add_argument('--threshold_reco', type=int,
+    parser.add_argument('--threshold_reco', type=float,
         help='Threshold to face recognition.', default=0.9)
     return parser.parse_args(argv)
 

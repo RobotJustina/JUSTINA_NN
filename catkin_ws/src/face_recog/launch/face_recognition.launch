@@ -1,0 +1,4 @@
+<launch>
+		<node name="face_recognition" pkg="face_recognition" type="face_recognition_node.py" output="screen">
+		</node>
+</launch>

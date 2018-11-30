@@ -7,6 +7,7 @@ import os.path
 import rospy
 import rosgraph
 import numpy as np
+import rospkg
 
 from face_recognition.face_recognition_cli import image_files_in_folder
 from std_msgs.msg import Header
@@ -20,8 +21,14 @@ from face_recog.srv import *
 
 
 
-def train_Images():
-    train_dir = "scripts/faces"
+def load_Images():
+
+    global Faces
+    global names
+    global train_dir 
+    global face_bounding_boxes
+    global verbose
+    
 	# Loop through each person in the training set
     for class_dir in os.listdir(train_dir):
         if not os.path.isdir(os.path.join(train_dir, class_dir)):
@@ -41,10 +48,68 @@ def train_Images():
                 Faces.append(face_recognition.face_encodings(image, known_face_locations=face_bounding_boxes)[0])
                 names.append(class_dir)
 
+def callbackTrain(msg):
+    global train_dir
+    global labels
+    global process_this_frame
+    global distances
+    global Faces
+    global names
+    global face_bounding_boxes
+
+    id = msg.data
+    path = train_dir + "/" + id 
+
+    try:  
+        os.mkdir(path)
+    except OSError:  
+        print ("Creation of the directory %s failed" % path)
+    else:  
+        print ("Successfully created the directory %s " % path)
+    
+    list = os.listdir(path)
+    index = len(list) + 1
+    name = id + "_" + str(index) + ".jpg"
+    print name
+
+    image = rospy.wait_for_message("/usb_cam/image_raw", Image, timeout = 1)
+    cv2_image = CvBridge().imgmsg_to_cv2(image,'bgr8')
+    cv2.imwrite(os.path.join(path, name), cv2_image) 
+
+    new_image = face_recognition.load_image_file(path + "/" + name)
+    face_bounding_boxes = face_recognition.face_locations(new_image)
+
+    if len(face_bounding_boxes) != 1:
+        # If there are no people (or too many people) in a training image, skip the image.
+        if verbose:
+            print("Image {} not suitable for training: {}".format(path + "/" + name, "Didn't find a face" if len(face_bounding_boxes) < 1 else "Found more than one face"))
+        else:
+            # Add face encoding for current image to the training set
+            Faces.append(face_recognition.face_encodings(new_image, known_face_locations=face_bounding_boxes)[0])
+            names.append(id)
+
+    print("index" , index) 
+
+    print("hola" , id)
+
 def face_recognition_callback(req):
+    global train_dir
+    global labels
+    global process_this_frame
+    global distances
+    global Faces
+    global names
+    global bridge
+    global face_encodings
+    global face_locations
+
     h = std_msgs.msg.Header()
     h.stamp = rospy.Time.now()
-    ret, frame = bridge.imgmsg_to_cv2(req.imageBGR, "bgr8")
+
+    try:
+        frame = bridge.imgmsg_to_cv2(req.imageBGR, 'bgr8')
+    except CvBridgeError as e:
+        print(e)
 
     if process_this_frame:
         face_locations = face_recognition.face_locations(frame)
@@ -52,8 +117,9 @@ def face_recognition_callback(req):
 
         labels = []
         distances = []
+        
 
-        for face_encodings in face_encodings:
+        for face_encoding in face_encodings:
             matches = face_recognition.compare_faces(Faces, face_encoding, tolerance)
             name = "Unknown"
 
@@ -64,6 +130,8 @@ def face_recognition_callback(req):
             labels.append(name)
 
     process_this_frame = not process_this_frame
+
+    recog_faces = []
 
     for (top, right, bottom, left), name in zip(face_locations, labels):
         bounding_box = [Point(top, right, 0), Point(bottom, left, 0)]
@@ -80,12 +148,19 @@ def face_recognition_callback(req):
 def main():
     rospy.init_node('face_recognition_node')
     rate = rospy.Rate(30)
+    rospack = rospkg.RosPack()
+    global train_dir
+    train_dir = rospack.get_path('face_recog') + "/faces"
 
     global labels
     global process_this_frame
     global distances
     global Faces
     global names 
+    global bridge
+    global face_locations
+    global face_encodings
+    global verbose
 
     Faces = []
     names = []
@@ -95,11 +170,12 @@ def main():
     verbose = True
     tolerance = 0.55
 
-    train_Images()
+    load_Images()
 
     bridge = CvBridge()
 
     s = rospy.Service('face_recog/faces', FaceRecognition, face_recognition_callback)
+    rospy.Subscriber("face_recog/train_online", String, callbackTrain)
 
     while not rospy.is_shutdown() and rosgraph.is_master_online():
         print("Waiting for image\n")

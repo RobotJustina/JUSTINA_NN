@@ -16,6 +16,7 @@ from facenet_ros.srv import *
 from scipy import misc
 import os
 import re
+import glob
 import argparse
 import tensorflow as tf
 import align.detect_face
@@ -27,6 +28,13 @@ import facenet
 import numpy as np
 import face_recognition as face
 import tensorflow as tf
+
+def sorted_nicely(strings):
+    return sorted(strings, key=natural_sort_key)
+
+def natural_sort_key(key):
+    import re
+    return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', key)]
 
 def facenet_align(cv_image):
     #print("facnet align function")
@@ -151,6 +159,7 @@ def add_overlays(frame, faces):
             cv2.rectangle(frame,
                           (face_bb[0], face_bb[1]), (face_bb[2], face_bb[3]),
                           (255, 0, 0), 2)
+            print ("---Face name ----" + str(face.name))
             if face.name is not None:
                 if face.probability > threshold_reco:
                     cv2.putText(frame, face.name, (face_bb[0], face_bb[3] - 30),
@@ -196,6 +205,62 @@ def face_recognition_callback(req):
 
     return FaceRecognitionResponse(VisionFaceObjects(h, recog_faces))
 
+def add_face_to_train(image, name):
+    print ('Trainig person' + name)
+    old_detect_multiple_faces = face_recognition.detect.detect_multiple_faces
+    face_recognition.detect.detect_multiple_faces = False
+
+    person_dir = training_dir + "/" + name
+    if not os.path.exists(person_dir):
+        os.makedirs(person_dir)
+    reg_exp = person_dir + "/" + name + "_[0-9]*.png"
+    result = sorted_nicely( glob.glob(reg_exp))
+    with facenetGraph.as_default():
+        with face_recognition.detect.sess.as_default():
+            faces = face_recognition.detect.find_faces(image)
+    for face in faces:
+        if (len(result) == 0):
+            filename = person_dir + "/" + name + "_0.png";
+        else:
+            last_result = result[-1]
+            number = re.search( person_dir + "/" + name + "_([0-9]*).png",last_result).group(1)
+            filename = person_dir + "/" + name + "_%i.png"%+(int(number)+1)
+        misc.imsave(filename, cv2.cvtColor(face.image, cv2.COLOR_BGR2RGB))
+
+    face_recognition.detect.detect_multiple_faces = old_detect_multiple_faces
+
+def train_faces_classifier():
+    dataset = facenet.get_dataset(classifier_dir)
+    for cls in dataset:
+        assert(len(cls.image_paths)>0, 'There must be at least one image for each class in the dataset')
+    paths, labels = facenet.get_image_paths_and_labels(dataset)
+
+    print('Number of classes: %d' % len(dataset))
+    print('Number of images: %d' % len(paths))
+
+    with facenetGraph.as_default():
+        with face_recognition.detect.sess.as_default():
+            images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
+            embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
+            phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
+            embedding_size = embeddings.get_shape()[1]
+
+            print('Calculating features for images')
+            nrof_images = len(paths)
+            nrof_batches_per_epoch = int(math.ceil(1.0 * nrof_images / batch_size))
+            emb_array = np.zeros((nrof_images, embedding_size))
+            for i in range(nrof_batches_per_epoch):
+                start_index = i * batch_size
+                end_index = min( (i+1) * batch_size, nrof_images)
+                paths_batch = paths[start_index:end_index]
+                images = facenet.load_data(paths_batch, False, False, image_size)
+                feed_dict = { images_placeholder:images, phase_train_placeholder:False }
+                emb_array[start_index:end_index,:] = face_recognition.encoder.sess.run(embeddings, feed_dict=feed_dict)
+            print (labels) 
+            face_recognition.identifier.model.fit(emb_array, labels)
+            class_names = [ cls.name.replace('_', ' ') for cls in dataset]
+            face_recognition.identifier.class_names = class_names
+
 def main(args):
     rospy.init_node('facenet_node', anonymous=True)
     rate = rospy.Rate(30) #30Hz
@@ -208,7 +273,14 @@ def main(args):
     global facenetGraph
     global face_recognition
 
+    global classifier_file
+    global classifier_dir
+    
     global threshold_reco
+
+    global image_size
+    global training_dir
+    global batch_size 
     
     ##global margin
     ##global image_size
@@ -222,11 +294,14 @@ def main(args):
    
     model_file = rospy.get_param("~model_file");
     classifier_file = rospy.get_param("~classifier_file")
+    classifier_dir = "/home/biorobotica/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"
     image_size = rospy.get_param("~image_size")
     margin = rospy.get_param("~margin")
     gpu_memory_fraction = rospy.get_param("~gpu_memory_fraction")
     detect_multiple_faces = rospy.get_param("~detect_multiple_faces")
     threshold_reco = rospy.get_param("~threshold_reco")
+    training_dir = "/home/biorobotica/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"
+    batch_size = 20
 
     ##with tf.Graph().as_default():
     ##    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)
@@ -263,6 +338,7 @@ def main(args):
             img = rospy.wait_for_message("/usb_cam/image_raw/compressed", CompressedImage, timeout=1)
             img_np_arr = np.fromstring(img.data, np.uint8)
             encoded_img = cv2.imdecode(img_np_arr, 1)
+            copy_encoded_img = encoded_img.copy()
             #flipped_img = cv2.flip(encoded_img, 1)
             with facenetGraph.as_default():
                 with face_recognition.encoder.sess.as_default():

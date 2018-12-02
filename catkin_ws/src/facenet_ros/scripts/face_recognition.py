@@ -98,14 +98,15 @@ class Detection:
     def _setup_mtcnn(self):
         with tf.Graph().as_default():
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=self.gpu_memory_fraction)
-            sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
-            with sess.as_default():
-                return align.detect_face.create_mtcnn(sess, None)
+            self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+            with self.sess.as_default():
+                return align.detect_face.create_mtcnn(self.sess, None)
 
     def find_faces(self, image):
         faces = []
 
-        bounding_boxes, _ = align.detect_face.detect_face(image, self.minsize,
+        with self.sess.as_default():
+            bounding_boxes, _ = align.detect_face.detect_face(image, self.minsize,
                                                           self.pnet, self.rnet, self.onet,
                                                           self.threshold, self.factor)
         

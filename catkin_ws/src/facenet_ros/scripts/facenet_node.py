@@ -230,7 +230,7 @@ def add_face_to_train(image, name):
     face_recognition.detect.detect_multiple_faces = old_detect_multiple_faces
 
 def train_faces_classifier():
-    dataset = facenet.get_dataset(classifier_dir)
+    dataset = facenet.get_dataset(trainin_dir)
     for cls in dataset:
         assert(len(cls.image_paths)>0, 'There must be at least one image for each class in the dataset')
     paths, labels = facenet.get_image_paths_and_labels(dataset)
@@ -294,13 +294,12 @@ def main(args):
    
     model_file = rospy.get_param("~model_file");
     classifier_file = rospy.get_param("~classifier_file")
-    classifier_dir = "/home/biorobotica/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"
     image_size = rospy.get_param("~image_size")
     margin = rospy.get_param("~margin")
     gpu_memory_fraction = rospy.get_param("~gpu_memory_fraction")
     detect_multiple_faces = rospy.get_param("~detect_multiple_faces")
     threshold_reco = rospy.get_param("~threshold_reco")
-    training_dir = "/home/biorobotica/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"
+    training_dir = "/home/nvidia/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"
     batch_size = 20
 
     ##with tf.Graph().as_default():
@@ -346,8 +345,8 @@ def main(args):
             add_overlays(encoded_img, faces)
        
             cv2.imshow('Face Recognition', encoded_img)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+    	    if cv2.waitKey(1) & 0xFF == ord('q'):
+            	return
         
         except rospy.ROSException as e:
             if 'timeout exceeded' in e.message:

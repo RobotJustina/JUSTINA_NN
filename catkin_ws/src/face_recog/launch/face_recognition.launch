@@ -1,4 +1,5 @@
 <launch>
-		<node name="face_recognition" pkg="face_recognition" type="face_recognition_node.py" output="screen">
+		<node name="face_recog" pkg="face_recog" type="face_recognition_node.py" output="screen">
+			<param name="train_dir" value="$(env HOME)/docker_volumen/face_recog_datasets/faces/"/>
 		</node>
 </launch>

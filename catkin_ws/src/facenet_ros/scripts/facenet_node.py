@@ -6,6 +6,7 @@ import rosgraph
 import cv2
 from std_msgs.msg import Header
 from std_msgs.msg import String
+from std_srvs.srv import Empty as EmptySrv
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
@@ -205,6 +206,18 @@ def face_recognition_callback(req):
 
     return FaceRecognitionResponse(VisionFaceObjects(h, recog_faces))
 
+def add_face_callback(req):
+    try:
+        cv_image = bridge.imgmsg_to_cv2(req.imageBGR, "bgr8")
+    except CvBridgeError as e:
+        print(e)
+    add_face_to_train(cv_image, req.id)
+    return FaceRecognitionResponse()
+
+def train_faces_callback(req):
+    train_faces_classifier()
+    return EmptySrvResponse()
+
 def add_face_to_train(image, name):
     print ('Trainig person' + name)
     old_detect_multiple_faces = face_recognition.detect.detect_multiple_faces
@@ -299,7 +312,7 @@ def main(args):
     gpu_memory_fraction = rospy.get_param("~gpu_memory_fraction")
     detect_multiple_faces = rospy.get_param("~detect_multiple_faces")
     threshold_reco = rospy.get_param("~threshold_reco")
-    training_dir = "/home/nvidia/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"
+    training_dir = "/home/biorobotica/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"
     batch_size = 20
 
     ##with tf.Graph().as_default():
@@ -324,7 +337,9 @@ def main(args):
     with facenetGraph.as_default():
         face_recognition = face.Recognition(facenet_model=model_file, classifier_model=classifier_file, face_crop_size=image_size, threshold=[0.7,0.8,0.8], factor=0.709, face_crop_margin=margin, gpu_memory_fraction=gpu_memory_fraction, detect_multiple_faces=detect_multiple_faces)
 
-    s = rospy.Service('facenet_recognizer/faces', FaceRecognition, face_recognition_callback)
+    s = rospy.Service('face_recognizer/faces', FaceRecognition, face_recognition_callback)
+    sa = rospy.Service('face_recognizer/train_face', FaceRecognition, add_face_callback)
+    st = rospy.Service('face_recognizer/train_flush', EmptySrv, train_faces_callback)
  
     ##rospy.Subscriber("/usb_cam/image_raw", Image, image_callback)
     ##rospy.spin()

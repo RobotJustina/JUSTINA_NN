@@ -48,8 +48,15 @@ def load_Images():
                 Faces.append(face_recognition.face_encodings(image, known_face_locations=face_bounding_boxes)[0])
                 names.append(class_dir)
     
+def train_faces_callback(req):
+    try:
+        cv_image = bridge.imgmsg_to_cv2(req.imageBGR, 'bgr8')
+    except CvBridgeError as e:
+        print(e)
+    train_new_face(cv_image, req.id)
+    return FaceRecognitionResponse()
 
-def callbackTrain(msg):
+def train_new_face(image, name):
     global train_dir
     global labels
     global process_this_frame
@@ -58,7 +65,9 @@ def callbackTrain(msg):
     global names
     global face_bounding_boxes
 
-    id = msg.data
+    print('Training person' + name)
+    #id = msg.data
+    id = name
     path = train_dir + "/" + id 
 
     try:  
@@ -70,20 +79,21 @@ def callbackTrain(msg):
     
     list = os.listdir(path)
     index = len(list) + 1
-    name = id + "_" + str(index) + ".jpg"
-    print name
+    name_image = id + "_" + str(index) + ".jpg"
+    print name_iamge
 
-    image = rospy.wait_for_message("/usb_cam/image_raw", Image, timeout = 1)
-    cv2_image = CvBridge().imgmsg_to_cv2(image,'bgr8')
-    cv2.imwrite(os.path.join(path, name), cv2_image) 
-    new_image = face_recognition.load_image_file(path + "/" + name)
+    #image = rospy.wait_for_message("/usb_cam/image_raw", Image, timeout = 1)
+    cv2_image = image
+    #cv2_image = CvBridge().imgmsg_to_cv2(image,'bgr8')
+    cv2.imwrite(os.path.join(path, name_image), cv2_image) 
+    new_image = face_recognition.load_image_file(path + "/" + name_image)
     face_bounding_boxes = face_recognition.face_locations(new_image)
         
     if len(face_bounding_boxes) != 1:
         
         # If there are no people (or too many people) in a training image, skip the image.
         if verbose:
-            print("Image {} not suitable for training: {}".format(path + "/" + name, "Didn't find a face" if len(face_bounding_boxes) < 1 else "Found more than one face"))
+            print("Image {} not suitable for training: {}".format(path + "/" + name_image, "Didn't find a face" if len(face_bounding_boxes) < 1 else "Found more than one face"))
     else:
         # Add face encoding for current image to the training set
         Faces.append(face_recognition.face_encodings(new_image, known_face_locations=face_bounding_boxes)[0])
@@ -177,7 +187,8 @@ def main():
 
     bridge = CvBridge()
 
-    s = rospy.Service('face_recog/faces', FaceRecognition, face_recognition_callback)
+    s = rospy.Service('face_recognizer/faces', FaceRecognition, face_recognition_callback)
+    st = rospy.Service('face_recognizer/train_flush', FaceRecognition, train_faces_callback)
     rospy.Subscriber("face_recog/train_online", String, callbackTrain)
 
     while not rospy.is_shutdown() and rosgraph.is_master_online():

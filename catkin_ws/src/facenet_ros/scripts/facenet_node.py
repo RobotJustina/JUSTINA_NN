@@ -7,6 +7,7 @@ import cv2
 from std_msgs.msg import Header
 from std_msgs.msg import String
 from std_srvs.srv import Empty as EmptySrv
+from std_srvs.srv import EmptyResponse as EmptySrvResponse
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
@@ -243,7 +244,7 @@ def add_face_to_train(image, name):
     face_recognition.detect.detect_multiple_faces = old_detect_multiple_faces
 
 def train_faces_classifier():
-    dataset = facenet.get_dataset(trainin_dir)
+    dataset = facenet.get_dataset(training_dir)
     for cls in dataset:
         assert(len(cls.image_paths)>0, 'There must be at least one image for each class in the dataset')
     paths, labels = facenet.get_image_paths_and_labels(dataset)
@@ -287,7 +288,7 @@ def main(args):
     global face_recognition
 
     global classifier_file
-    global classifier_dir
+    global training_dir
     
     global threshold_reco
 

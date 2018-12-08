@@ -80,7 +80,7 @@ def train_new_face(image, name):
     list = os.listdir(path)
     index = len(list) + 1
     name_image = id + "_" + str(index) + ".jpg"
-    print name_iamge
+    print name_image
 
     #image = rospy.wait_for_message("/usb_cam/image_raw", Image, timeout = 1)
     cv2_image = image
@@ -120,6 +120,7 @@ def face_recognition_callback(req):
     except CvBridgeError as e:
         print(e)
 
+    recog_faces = []
     if process_this_frame:
         face_locations = face_recognition.face_locations(frame)
         face_encodings = face_recognition.face_encodings(frame, face_locations)
@@ -127,29 +128,36 @@ def face_recognition_callback(req):
         labels = []
         distances = []
         
-
+        index_face = 0
         for face_encoding in face_encodings:
             matches = face_recognition.compare_faces(Faces, face_encoding, tolerance)
             name = "Unknown"
+            face_distance = 0
 
             if True in matches:
                 first_match_index = matches.index(True)
-                name = names[first_match_index]
                 face_distances = face_recognition.face_distance(Faces, face_encoding)
+                first_match_index = np.argmin(face_distances)
+                name = names[first_match_index]
                 face_distance = face_distances[first_match_index]
                 face_distance = 1 - round(face_distance,2)
+            (top, right, bottom, left) = face_locations[index_face]
+            bounding_box = [Point(left, top, 0), Point(right, bottom, 0)]
+            face_centroid = Point((right + left)/2, (top + bottom)/2, 0)
+            face_class = VisionFaceObject(id = name, confidence = face_distance, face_centroid=face_centroid, bounding_box=bounding_box)
+            recog_faces.append(face_class)
+            #labels.append(name)
+            index_face+=1
 
-            labels.append(name)
+    #process_this_frame = not process_this_frame
 
-    process_this_frame = not process_this_frame
+    #recog_faces = []
 
-    recog_faces = []
-
-    for (top, right, bottom, left), name in zip(face_locations, labels):
-        bounding_box = [Point(top, right, 0), Point(bottom, left, 0)]
-        face_centroid = Point((top + bottom)/2, (right + left)/2, 0)
-        face_class = VisionFaceObject(id = name, confidence = face_distance, face_centroid=face_centroid, bounding_box=bounding_box)
-        recog_faces.append(face_class)
+    #for (top, right, bottom, left), name in zip(face_locations, labels):
+    #    bounding_box = [Point(top, right, 0), Point(bottom, left, 0)]
+    #    face_centroid = Point((top + bottom)/2, (right + left)/2, 0)
+    #    face_class = VisionFaceObject(id = name, confidence = face_distance, face_centroid=face_centroid, bounding_box=bounding_box)
+    #    recog_faces.append(face_class)
     
     return FaceRecognitionResponse(VisionFaceObjects(h, recog_faces))
 
@@ -158,7 +166,7 @@ def face_recognition_callback(req):
 
 
 def main():
-    rospy.init_node('face_recognition_node')
+    rospy.init_node('face_recognition_lib_node')
     rate = rospy.Rate(30)
     rospack = rospkg.RosPack()
     global train_dir
@@ -174,6 +182,7 @@ def main():
     global face_locations
     global face_encodings
     global verbose
+    global tolerance
 
     Faces = []
     names = []
@@ -188,8 +197,8 @@ def main():
     bridge = CvBridge()
 
     s = rospy.Service('face_recognizer/faces', FaceRecognition, face_recognition_callback)
-    st = rospy.Service('face_recognizer/train_flush', FaceRecognition, train_faces_callback)
-    rospy.Subscriber("face_recog/train_online", String, callbackTrain)
+    st = rospy.Service('face_recognizer/train_face', FaceRecognition, train_faces_callback)
+    #rospy.Subscriber("face_recog/train_online", String, callbackTrain)
 
     while not rospy.is_shutdown() and rosgraph.is_master_online():
         print("Waiting for image\n")

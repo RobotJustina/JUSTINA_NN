@@ -4,6 +4,8 @@ import face_recognition
 import cv2
 import os
 import os.path
+import glob
+import re
 import rospy
 import rosgraph
 import numpy as np
@@ -19,7 +21,12 @@ from cv_bridge import CvBridge, CvBridgeError
 from face_recog.msg import *
 from face_recog.srv import *
 
+def sorted_nicely(strings):
+    return sorted(strings, key=natural_sort_key)
 
+def natural_sort_key(key):
+    import re
+    return [int(t) if t.isdigit() else t for t in re.split(r'(\d+)', key)]
 
 def load_Images():
 
@@ -39,14 +46,27 @@ def load_Images():
             image = face_recognition.load_image_file(img_path)
             face_bounding_boxes = face_recognition.face_locations(image)
 
-            if len(face_bounding_boxes) != 1:
-                # If there are no people (or too many people) in a training image, skip the image.
-                if verbose:
-                    print("Image {} not suitable for training: {}".format(img_path, "Didn't find a face" if len(face_bounding_boxes) < 1 else "Found more than one face"))
-            else:
+            if len(face_bounding_boxes) > 1:
+                img_size = np.asarray(image.shape)[0:2]
+                det = []
+                for (top, right, bottom, left) in face_bounding_boxes:
+                    det.append(np.array([left, bottom, right, top]))
+                det = np.array(det)
+                bounding_box_size = (det[:,2] - det[:,0]) * (det[:,3] - det[:,1])
+                img_center = img_size / 2
+                offsets = np.vstack([ (det[:,0] + det[:,2])/2 - img_center[1], (det[:,1] + det[:,3])/2 - img_center[0] ])
+                offset_dist_squared = np.sum(np.power(offsets, 2.0), 0)
+                index = np.argmax(bounding_box_size - offset_dist_squared * 2.0)
+                Faces.append(face_recognition.face_encodings(image, known_face_locations=face_bounding_boxes)[index])
+                names.append(class_dir)
+            elif len(face_bounding_boxes) == 1:
                 # Add face encoding for current image to the training set
                 Faces.append(face_recognition.face_encodings(image, known_face_locations=face_bounding_boxes)[0])
                 names.append(class_dir)
+            else:
+                # If there are no people (or too many people) in a training image, skip the image.
+                if verbose:
+                    print("Image {} not suitable for training: {}".format(img_path, "Didn't find a face" if len(face_bounding_boxes) < 1 else "Found more than one face"))
     
 def train_faces_callback(req):
     try:
@@ -68,18 +88,27 @@ def train_new_face(image, name):
     print('Training person' + name)
     #id = msg.data
     id = name
-    path = train_dir + "/" + id 
 
+    path = train_dir + "/" + id
     try:  
-        os.mkdir(path)
+        if not os.path.exists(path):
+            os.makedirs(path)
     except OSError:  
         print ("Creation of the directory %s failed" % path)
     else:  
         print ("Successfully created the directory %s " % path)
+    reg_exp = path + "/" + id + "_[0-9]*.jpg"
+    result = sorted_nicely( glob.glob(reg_exp))
+    if (len(result) == 0):
+        name_image = id + "_0.jpg";
+    else:
+        last_result = result[-1]
+        number = re.search( path + "/" + id + "_([0-9]*).jpg",last_result).group(1)
+        name_image = id + "_%i.jpg"%+(int(number)+1)
     
-    list = os.listdir(path)
-    index = len(list) + 1
-    name_image = id + "_" + str(index) + ".jpg"
+    #list = os.listdir(path)
+    #index = len(list) + 1
+    #name_image = id + "_" + str(index) + ".jpg"
     print name_image
 
     #image = rospy.wait_for_message("/usb_cam/image_raw", Image, timeout = 1)
@@ -89,15 +118,27 @@ def train_new_face(image, name):
     new_image = face_recognition.load_image_file(path + "/" + name_image)
     face_bounding_boxes = face_recognition.face_locations(new_image)
         
-    if len(face_bounding_boxes) != 1:
-        
-        # If there are no people (or too many people) in a training image, skip the image.
-        if verbose:
-            print("Image {} not suitable for training: {}".format(path + "/" + name_image, "Didn't find a face" if len(face_bounding_boxes) < 1 else "Found more than one face"))
-    else:
+    if len(face_bounding_boxes) > 1:
+        img_size = np.asarray(image.shape)[0:2]
+        det = []
+        for (top, right, bottom, left) in face_bounding_boxes:
+            det.append(np.array([left, bottom, right, top]))
+        det = np.array(det)
+        bounding_box_size = (det[:,2] - det[:,0]) * (det[:,3] - det[:,1])
+        img_center = img_size / 2
+        offsets = np.vstack([ (det[:,0] + det[:,2])/2 - img_center[1], (det[:,1] + det[:,3])/2 - img_center[0] ])
+        offset_dist_squared = np.sum(np.power(offsets, 2.0), 0)
+        index = np.argmax(bounding_box_size - offset_dist_squared * 2.0)
+        Faces.append(face_recognition.face_encodings(new_image, known_face_locations=face_bounding_boxes)[index])
+        names.append(id)
+    elif len(face_bounding_boxes) == 1:
         # Add face encoding for current image to the training set
         Faces.append(face_recognition.face_encodings(new_image, known_face_locations=face_bounding_boxes)[0])
         names.append(id)
+    else:
+        # If there are no people (or too many people) in a training image, skip the image.
+        if verbose:
+            print("Image {} not suitable for training: {}".format(path + "/" + name_image, "Didn't find a face" if len(face_bounding_boxes) < 1 else "Found more than one face"))
 
     
 
@@ -134,13 +175,16 @@ def face_recognition_callback(req):
             name = "Unknown"
             face_distance = 0
 
-            if True in matches:
-                first_match_index = matches.index(True)
+            if len(matches) > 0:
                 face_distances = face_recognition.face_distance(Faces, face_encoding)
-                first_match_index = np.argmin(face_distances)
-                name = names[first_match_index]
+                if True in matches:
+                    first_match_index = np.argmin(face_distances)
+                    name = names[first_match_index]
+                else:
+                    first_match_index = np.argmin(face_distances)
                 face_distance = face_distances[first_match_index]
-                face_distance = 1 - round(face_distance,2)
+
+            face_distance = 1 - round(face_distance,2)
             (top, right, bottom, left) = face_locations[index_face]
             bounding_box = [Point(left, top, 0), Point(right, bottom, 0)]
             face_centroid = Point((right + left)/2, (top + bottom)/2, 0)
@@ -183,6 +227,14 @@ def main():
     global face_encodings
     global verbose
     global tolerance
+    
+    try:  
+        if not os.path.exists(train_dir):
+            os.makedirs(train_dir)
+    except OSError:  
+        print ("Creation of the directory %s failed" % train_dir)
+    else:  
+        print ("Successfully created the directory %s " % train_dir)
 
     Faces = []
     names = []

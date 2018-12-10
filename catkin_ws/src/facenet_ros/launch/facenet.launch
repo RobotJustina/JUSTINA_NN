@@ -4,11 +4,14 @@
 			<param name="model_file" value="$(env HOME)/docker_volumen/facenet_models/20180402-114759/" />
 			<param name="classifier_file" value="$(env HOME)/docker_volumen/facenet_models/biorobotica_classifier.pkl" />
 			<param name="database" value="$(env HOME)/docker_volumen/facenet_datasets/pre_madrid/pre_madrid_mtcnnpy_160_1/"/>
+			<param name="training_dir" value="$(env HOME)/docker_volumen/facenet_datasets/biorobotica/biorobotica_mtcnnpy_160"/>
+			<param name="classifier_mode" value="False"/>
+			<param name="batch_size" value="20"/>
 			<param name="image_size" value="160"/>
-			<param name="margin" value="0"/>
+			<param name="margin" value="32"/>
 			<param name="gpu_memory_fraction" value="0.25"/>
 			<param name="detect_multiple_faces" value="True"/>
-			<param name="threshold_reco" value="0.9"/>
+			<param name="threshold_reco" value="0.0"/>
 		</node>
 	</group>
 </launch>

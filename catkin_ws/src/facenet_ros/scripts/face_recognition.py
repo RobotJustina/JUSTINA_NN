@@ -1,5 +1,6 @@
 import pickle
 import os
+import math
 
 import cv2
 import numpy as np
@@ -19,10 +20,16 @@ class Face:
         self.embedding = None
 
 class Recognition:
-    def __init__(self, facenet_model, classifier_model, face_crop_size=160, face_crop_margin=32, minsize=20, threshold=[0.6, 0.7, 0.7], factor=0.709, gpu_memory_fraction=0.3, detect_multiple_faces=True):
+    def __init__(self, facenet_model, data_dir, face_crop_size=160, face_crop_margin=32, minsize=20, threshold=[0.6, 0.7, 0.7], factor=0.709, gpu_memory_fraction=0.3, detect_multiple_faces=True):
         self.detect = Detection(face_crop_size=face_crop_size, face_crop_margin=face_crop_margin, minsize=minsize, threshold=threshold, factor=factor, gpu_memory_fraction=gpu_memory_fraction, detect_multiple_faces=detect_multiple_faces)
+        dataset = facenet.get_dataset(data_dir)
+        paths, labels = facenet.get_image_paths_and_labels(dataset)
+        class_names = [ cls.name.replace('_', ' ') for cls in dataset]
+        print('Number of classes: %d' % len(dataset))
+        print('Number of images: %d' % len(paths))
         self.encoder = Encoder(facenet_model=facenet_model)
-        self.identifier = Identifier(classifier_model=classifier_model)
+        with self.encoder.sess.as_default():
+            self.identifier = Identifier(self.encoder.generate_embeddings(paths, 20, face_crop_size), labels, class_names)
 
     def add_identity(self, image, person_name):
         faces = self.detect.find_faces(image)
@@ -45,19 +52,24 @@ class Recognition:
         return faces
 
 class Identifier:
-    def __init__(self, classifier_model):
-        with open(classifier_model, 'rb') as infile:
-            self.model, self.class_names = pickle.load(infile)
+    def __init__(self, db_emb, labels, class_names):
+        self.db_emb = db_emb
+        self.labels = labels
+        self.class_names = class_names
 
     def identify(self, face):
         if face.embedding is not None:
-            predictions = self.model.predict_proba([face.embedding])
-            #print(predictions)
-            best_class_indices = np.argmax(predictions, axis=1)
-            #print(best_class_indices)
-            best_class_probabilities = predictions[np.arange(len(best_class_indices)), best_class_indices]
-            #print best_class_probabilities
-            return self.class_names[best_class_indices[0]], best_class_probabilities[0]
+            best_class_index = 0
+            best = 10.0
+            for db_index in range(len(self.db_emb)): 
+                dist = np.sqrt(np.sum(np.square(np.subtract(self.db_emb[db_index,:], face.embedding))))
+                if dist < best:
+                    best = dist
+                    best_class_index = db_index
+            if best < 0.95:
+                return self.class_names[self.labels[best_class_index]], best
+            else:
+                return "Unknown", abs(0.95 - best)
 
 class Encoder:
     def __init__(self, facenet_model):
@@ -76,6 +88,25 @@ class Encoder:
         # Run forward pass to calculate embeddings
         feed_dict = {images_placeholder: [prewhiten_face], phase_train_placeholder: False}
         return self.sess.run(embeddings, feed_dict=feed_dict)[0]
+
+    def generate_embeddings(self, paths, batch_size, image_size):
+        # Get input and output tensors
+        images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
+        embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
+        phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
+        embedding_size = embeddings.get_shape()[1]
+        nrof_images = len(paths)
+        nrof_batches_per_epoch = int(math.ceil(1.0 * nrof_images / batch_size))
+        emb_array = np.zeros((nrof_images, embedding_size))
+        for i in range(nrof_batches_per_epoch):
+            start_index = i * batch_size
+            end_index = min((i+1) * batch_size, nrof_images)
+            paths_batch = paths[start_index:end_index]
+            images = facenet.load_data(paths_batch, False, False, image_size)
+            # Run forward pass to calculate embeddings
+            feed_dict = { images_placeholder:images, phase_train_placeholder:False }
+            emb_array[start_index:end_index,:] = self.sess.run(embeddings, feed_dict=feed_dict)
+        return emb_array
 
 class Detection:
     # face detection parameters

@@ -1,7 +1,7 @@
 <launch>
 	<group ns="vision">
 		<node name="face_recog_lib_node" pkg="face_recog" type="face_recognition_node.py" output="screen">
-			<param name="train_dir" value="$(env HOME)/docker_volumen/face_recog_datasets/faces/"/>
+			<param name="train_dir" value="$(env HOME)/docker_volumen/face_recog_datasets/faces"/>
 		</node>
 	</group>
 </launch>

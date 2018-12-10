@@ -205,10 +205,6 @@ def main(args):
     rospack = RosPack()
     rate = rospy.Rate(30) #30Hz
 
-    ##global pnet
-    ##global rnet
-    ##global onet
-
     global bridge
     global facenetGraph
     global face_recognition
@@ -341,7 +337,6 @@ def main(args):
                             if len(indices) > 0:
                                 for index in range(len(indices)):
                                     del face_recognition.identifier.labels[indices[index] + removes]
-                                    #del face_recognition.identifier.db_emb[indices[index] + removes]
                                     removes -= 1
                                 face_recognition.identifier.db_emb = np.delete(face_recognition.identifier.db_emb, indices , 0)
                         except ValueError:

@@ -10,6 +10,7 @@ import rospy
 import rosgraph
 import numpy as np
 import rospkg
+import shutil
 
 from face_recognition.face_recognition_cli import image_files_in_folder
 from std_msgs.msg import Header
@@ -20,6 +21,7 @@ from geometry_msgs.msg import Point
 from cv_bridge import CvBridge, CvBridgeError
 from face_recog.msg import *
 from face_recog.srv import *
+from std_msgs.msg import Empty
 
 def sorted_nicely(strings):
     return sorted(strings, key=natural_sort_key)
@@ -106,14 +108,10 @@ def train_new_face(image, name):
         number = re.search( path + "/" + id + "_([0-9]*).jpg",last_result).group(1)
         name_image = id + "_%i.jpg"%+(int(number)+1)
     
-    #list = os.listdir(path)
-    #index = len(list) + 1
-    #name_image = id + "_" + str(index) + ".jpg"
+    
     print name_image
 
-    #image = rospy.wait_for_message("/usb_cam/image_raw", Image, timeout = 1)
     cv2_image = image
-    #cv2_image = CvBridge().imgmsg_to_cv2(image,'bgr8')
     cv2.imwrite(os.path.join(path, name_image), cv2_image) 
     new_image = face_recognition.load_image_file(path + "/" + name_image)
     face_bounding_boxes = face_recognition.face_locations(new_image)
@@ -183,29 +181,26 @@ def face_recognition_callback(req):
                 else:
                     first_match_index = np.argmin(face_distances)
                 face_distance = face_distances[first_match_index]
-
-            face_distance = 1 - round(face_distance,2)
-            (top, right, bottom, left) = face_locations[index_face]
-            bounding_box = [Point(left, top, 0), Point(right, bottom, 0)]
-            face_centroid = Point((right + left)/2, (top + bottom)/2, 0)
-            face_class = VisionFaceObject(id = name, confidence = face_distance, face_centroid=face_centroid, bounding_box=bounding_box)
-            recog_faces.append(face_class)
-            #labels.append(name)
-            index_face+=1
-
-    #process_this_frame = not process_this_frame
-
-    #recog_faces = []
-
-    #for (top, right, bottom, left), name in zip(face_locations, labels):
-    #    bounding_box = [Point(top, right, 0), Point(bottom, left, 0)]
-    #    face_centroid = Point((top + bottom)/2, (right + left)/2, 0)
-    #    face_class = VisionFaceObject(id = name, confidence = face_distance, face_centroid=face_centroid, bounding_box=bounding_box)
-    #    recog_faces.append(face_class)
+                if(req.id == '' or name == req.id.replace("_"," ")):
+                    face_distance = 1 - round(face_distance,2)
+                    (top, right, bottom, left) = face_locations[index_face]
+                    bounding_box = [Point(left, top, 0), Point(right, bottom, 0)]
+                    face_centroid = Point((right + left)/2, (top + bottom)/2, 0)
+                    face_class = VisionFaceObject(id = name, confidence = face_distance, face_centroid=face_centroid, bounding_box=bounding_box)
+                    recog_faces.append(face_class)
+                index_face+=1
     
     return FaceRecognitionResponse(VisionFaceObjects(h, recog_faces))
 
+def clear_faces_callback(msg):
+    global clear_bd
+    clear_bd = True
 
+def clear_face_id_callback(msg):
+    global clear_face_id
+    global face_clear_id
+    clear_face_id = True
+    face_clear_id = msg.data
 
 
 
@@ -227,7 +222,15 @@ def main():
     global face_encodings
     global verbose
     global tolerance
-    
+    global clear_face_id
+    global clear_bd
+    global face_clear_id
+
+    clear_face_id = False
+    clear_bd = False
+    face_clear_id = ""
+    face_recog_available = True
+
     try:  
         if not os.path.exists(train_dir):
             os.makedirs(train_dir)
@@ -250,6 +253,8 @@ def main():
 
     s = rospy.Service('face_recognizer/faces', FaceRecognition, face_recognition_callback)
     st = rospy.Service('face_recognizer/train_face', FaceRecognition, train_faces_callback)
+    rospy.Subscriber("face_recognizer/clear_faces", Empty, clear_faces_callback)
+    rospy.Subscriber("face_recognizer/clear_face_id", String, clear_face_id_callback)
     #rospy.Subscriber("face_recog/train_online", String, callbackTrain)
 
     while not rospy.is_shutdown() and rosgraph.is_master_online():
@@ -279,9 +284,6 @@ def main():
 
                     labels.append(name)
                     
-                    #print("The test image has a distance of {} ".format(face_distances))
-                    #print("Names: ", names)
-                    #print("Index",first_match_index)
             process_this_frame = not process_this_frame
 
 
@@ -300,11 +302,29 @@ def main():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         except rospy.ROSException as e:
-            if 'timeout exceeded' in e.message:
-                continue  # no new waypoint within timeout, looping...
-            else:
-                raise e
+            pass
+        if clear_bd or clear_face_id:
+            print('Trying to clean data base')
+            if os.path.exists(train_dir):
+                if clear_bd:
+                    shutil.rmtree(train_dir, ignore_errors=True)
+                    Faces = []
+                    names = []
+                if clear_face_id:
+                    person_dir = train_dir + "/" + face_clear_id
+                    if os.path.exists(person_dir):
+                        shutil.rmtree(person_dir, ignore_errors=True)
+                        index = 0
+                        while index < len(names):
+                            if names[index]==face_clear_id:
+                                names.pop(index)
+                                Faces.pop(index)
+                            else:
+                                index = index + 1
+            clear_bd = False
+            clear_face_id = False
 
+        
         rate.sleep()
 if __name__=='__main__':
     main()

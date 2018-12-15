@@ -19,8 +19,8 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
 from cv_bridge import CvBridge, CvBridgeError
-from face_recog.msg import *
-from face_recog.srv import *
+from justina_nn_msgs.msg import *
+from justina_nn_msgs.srv import *
 from std_msgs.msg import Empty
 
 def sorted_nicely(strings):

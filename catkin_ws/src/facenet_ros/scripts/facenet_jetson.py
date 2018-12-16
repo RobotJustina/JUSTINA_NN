@@ -94,7 +94,7 @@ def face_recognition_callback(req):
                 
             img_size = np.asarray(cv_image.shape)[0:2]
             bounding_box = [Point(img_size[1] - face.bounding_box[2], face.bounding_box[1], 0), Point(img_size[1] - face.bounding_box[0], face.bounding_box[3], 0)]
-            face_centroid = Point(img_size[1] - (face.bounding_box[0] + face.bounding_box[2]) / 2, (face.bounding_box[1] + face.bounding_box[3] / 2), 0)
+            face_centroid = Point(img_size[1] - (face.bounding_box[0] + face.bounding_box[2]) / 2, (face.bounding_box[1] + face.bounding_box[3]) / 2, 0)
             face_class = VisionFaceObject(id=face_name, confidence=confidence, face_centroid=face_centroid, bounding_box=bounding_box)
             recog_faces.append(face_class);
 

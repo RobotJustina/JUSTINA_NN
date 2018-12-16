@@ -86,7 +86,6 @@ class Detection:
     detect_multiple_faces = True
 
     def __init__(self, face_crop_size=160, face_crop_margin=32, minsize=20, threshold=[0.6, 0.7, 0.7], factor=0.709, gpu_memory_fraction=0.3, detect_multiple_faces=True):
-        self.pnet, self.rnet, self.onet = self._setup_mtcnn()
         self.face_crop_size = face_crop_size
         self.face_crop_margin = face_crop_margin
         self.minsize = minsize
@@ -94,6 +93,7 @@ class Detection:
         self.factor = factor
         self.gpu_memory_fraction = gpu_memory_fraction
         self.detect_multiple_faces = detect_multiple_faces
+        self.pnet, self.rnet, self.onet = self._setup_mtcnn()
 
     def _setup_mtcnn(self):
         with tf.Graph().as_default():

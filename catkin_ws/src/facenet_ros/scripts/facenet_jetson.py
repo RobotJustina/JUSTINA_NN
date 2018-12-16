@@ -255,7 +255,7 @@ def main(args):
         if classifier_mode:
             face_recognition = faceC.Recognition(facenet_model=model_file, classifier_model=classifier_file, face_crop_size=image_size, threshold=[0.7,0.8,0.8], factor=0.709, face_crop_margin=margin, gpu_memory_fraction=gpu_memory_fraction, detect_multiple_faces=detect_multiple_faces)
         else:
-            face_recognition = face.Recognition(facenet_model=model_file, data_dir=training_dir, face_crop_size=image_size, threshold=[0.7,0.8,0.8], factor=0.709, face_crop_margin=margin, gpu_memory_fraction=gpu_memory_fraction, detect_multiple_faces=detect_multiple_faces)
+            face_recognition = face.Recognition(facenet_model=model_file, data_dir=training_dir, face_crop_size=image_size, threshold=[0.7,0.8,0.8], factor=0.709, face_crop_margin=margin, gpu_memory_fraction=gpu_memory_fraction, detect_multiple_faces=detect_multiple_faces, batch_size=batch_size)
 
     while 1:
         if rospy.is_shutdown():

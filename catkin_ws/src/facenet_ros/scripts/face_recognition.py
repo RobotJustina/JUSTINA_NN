@@ -20,7 +20,7 @@ class Face:
         self.embedding = None
 
 class Recognition:
-    def __init__(self, facenet_model, data_dir, face_crop_size=160, face_crop_margin=32, minsize=20, threshold=[0.6, 0.7, 0.7], factor=0.709, gpu_memory_fraction=0.3, detect_multiple_faces=True):
+    def __init__(self, facenet_model, data_dir, face_crop_size=160, face_crop_margin=32, minsize=20, threshold=[0.6, 0.7, 0.7], factor=0.709, gpu_memory_fraction=0.3, detect_multiple_faces=True, batch_size=20):
         self.detect = Detection(face_crop_size=face_crop_size, face_crop_margin=face_crop_margin, minsize=minsize, threshold=threshold, factor=factor, gpu_memory_fraction=gpu_memory_fraction, detect_multiple_faces=detect_multiple_faces)
         dataset = facenet.get_dataset(data_dir)
         paths, labels = facenet.get_image_paths_and_labels(dataset)
@@ -29,7 +29,7 @@ class Recognition:
         print('Number of images: %d' % len(paths))
         self.encoder = Encoder(facenet_model=facenet_model)
         with self.encoder.sess.as_default():
-            self.identifier = Identifier(self.encoder.generate_embeddings(paths, 20, face_crop_size), labels, class_names)
+            self.identifier = Identifier(self.encoder.generate_embeddings(paths, batch_size, face_crop_size), labels, class_names)
 
     def add_identity(self, image, person_name):
         faces = self.detect.find_faces(image)
@@ -117,7 +117,6 @@ class Detection:
     detect_multiple_faces = True
 
     def __init__(self, face_crop_size=160, face_crop_margin=32, minsize=20, threshold=[0.6, 0.7, 0.7], factor=0.709, gpu_memory_fraction=0.3, detect_multiple_faces=True):
-        self.pnet, self.rnet, self.onet = self._setup_mtcnn()
         self.face_crop_size = face_crop_size
         self.face_crop_margin = face_crop_margin
         self.minsize = minsize
@@ -125,6 +124,7 @@ class Detection:
         self.factor = factor
         self.gpu_memory_fraction = gpu_memory_fraction
         self.detect_multiple_faces = detect_multiple_faces
+        self.pnet, self.rnet, self.onet = self._setup_mtcnn()
 
     def _setup_mtcnn(self):
         with tf.Graph().as_default():

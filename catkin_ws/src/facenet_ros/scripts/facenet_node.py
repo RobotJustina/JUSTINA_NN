@@ -72,7 +72,7 @@ def face_recognition_callback(req):
         with face_recognition.encoder.sess.as_default():
             try:
                 cv_image = bridge.imgmsg_to_cv2(req.imageBGR, "bgr8")
-                cv_image = cv2.flip(cv_image, 1)
+                #cv_image = cv2.flip(cv_image, 1)
             except CvBridgeError as e:
                 print(e)
             faces = face_recognition.identify(cv_image)
@@ -92,8 +92,10 @@ def face_recognition_callback(req):
                 continue
                 
             img_size = np.asarray(cv_image.shape)[0:2]
-            bounding_box = [Point(img_size[1] - face.bounding_box[2], face.bounding_box[1], 0), Point(img_size[1] - face.bounding_box[0], face.bounding_box[3], 0)]
-            face_centroid = Point(img_size[1] - (face.bounding_box[0] + face.bounding_box[2]) / 2, (face.bounding_box[1] + face.bounding_box[3]) / 2, 0)
+            #bounding_box = [Point(img_size[1] - face.bounding_box[2], face.bounding_box[1], 0), Point(img_size[1] - face.bounding_box[0], face.bounding_box[3], 0)]
+            #face_centroid = Point(img_size[1] - (face.bounding_box[0] + face.bounding_box[2]) / 2, (face.bounding_box[1] + face.bounding_box[3]) / 2, 0)
+            bounding_box = [Point(face.bounding_box[0], face.bounding_box[1], 0), Point(face.bounding_box[2], face.bounding_box[3], 0)]
+            face_centroid = Point((face.bounding_box[0] + face.bounding_box[2]) / 2, (face.bounding_box[1] + face.bounding_box[3]) / 2, 0)
             face_class = VisionFaceObject(id=face_name, confidence=confidence, face_centroid=face_centroid, bounding_box=bounding_box)
             recog_faces.append(face_class);
 
@@ -116,7 +118,7 @@ def train_faces_callback(req):
 
 def add_face_to_train(image, name):
     print ('Trainig person' + name)
-    image = cv2.flip(image, 1)
+    #image = cv2.flip(image, 1)
     old_detect_multiple_faces = face_recognition.detect.detect_multiple_faces
     face_recognition.detect.detect_multiple_faces = False
 
@@ -290,7 +292,7 @@ def main(args):
             img = rospy.wait_for_message("/usb_cam/image_raw/compressed", CompressedImage, timeout=1)
             img_np_arr = np.fromstring(img.data, np.uint8)
             encoded_img = cv2.imdecode(img_np_arr, 1)
-            encoded_img = cv2.flip(encoded_img, 1)
+            #encoded_img = cv2.flip(encoded_img, 1)
             with facenetGraph.as_default():
                 with face_recognition.encoder.sess.as_default():
                     faces = face_recognition.identify(encoded_img)

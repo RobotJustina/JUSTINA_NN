@@ -1,0 +1,13 @@
+<launch>
+	<group ns="vision">
+		<node name="face_age_gender_node" pkg="face_age_gender" type="face_age_gender_node.py" output="screen">
+			<param name="model_path" value="$(env HOME)/docker_volumen/face_age_gender/models" />
+			<param name="face_landmarks_file" value="$(env HOME)/docker_volumen/face_age_gender/shape_predictor_68_face_landmarks.dat" />
+			<param name="weight_file" value="" />
+			<param name="depth" value="16" />
+			<param name="width" value="8" />
+			<param name="image_size" value="160"/>
+			<param name="gpu_memory_fraction" value="0.25"/>
+		</node>
+	</group>
+</launch>

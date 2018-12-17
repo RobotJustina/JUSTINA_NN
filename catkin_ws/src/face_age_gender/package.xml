@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>face_age_gender_node</name>
+  <name>face_age_gender</name>
   <version>0.0.0</version>
-  <description>The face_age_gender_node package</description>
+  <description>The face_age_gender package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

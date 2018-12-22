@@ -93,11 +93,6 @@ def faces_age_gender_callback(req):
         for i, fr in enumerate(req.faces.recog_faces):
             d = dlib.rectangle(left=int(fr.bounding_box[0].x), top=int(fr.bounding_box[0].y), right=int(fr.bounding_box[1].x), bottom=int(fr.bounding_box[1].y))
             x1, y1, x2, y2, w, h = d.left(), d.top(), d.right() + 1, d.bottom() + 1, d.width(), d.height()
-            xw1 = max(int(x1 - 0.4 * w), 0)
-            yw1 = max(int(y1 - 0.4 * h), 0)
-            xw2 = min(int(x2 + 0.4 * w), img_w - 1)
-            yw2 = min(int(y2 + 0.4 * h), img_h - 1)
-            cv2.rectangle(cv_image, (x1, y1), (x2, y2), (255, 0, 0), 2)
             faces[i, :, :, :] = fa.align(input_img, gray, d)
         
         recog_faces = req.faces.recog_faces

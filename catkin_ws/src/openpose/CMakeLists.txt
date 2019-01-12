@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(openpose_node)
+project(openpose)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 message(STATUS "CMAKE Module Path at ${CMAKE_MODULE_PATH}")
@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 	rospy
 	std_msgs
 	sensor_msgs
+	cv_bridge
 	geometry_msgs
 	justina_nn_msgs
 	)

@@ -13,12 +13,16 @@ add_message_files(
 	FILES
 	VisionFaceObject.msg
 	VisionFaceObjects.msg
+	OpenPoseKeyPoint.msg
+	OpenPoseRecognition.msg
+	OpenPoseRecognitions.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
 	FILES
-	FaceRecognition.srv 
+	FaceRecognition.srv
+	OpenPoseRecognize.srv
 )
 
 ## Generate actions in the 'action' folder

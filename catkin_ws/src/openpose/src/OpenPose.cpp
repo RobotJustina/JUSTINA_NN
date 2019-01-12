@@ -1,4 +1,4 @@
-#include "openpose_node/OpenPose.hpp"
+#include "openpose/OpenPose.hpp"
 
 OpenPose::OpenPose(){
 }

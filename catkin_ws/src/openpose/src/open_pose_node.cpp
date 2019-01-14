@@ -12,8 +12,8 @@
 
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
-#include <justina_nn_msgs/OpenPoseRecognitions.h>
-#include <justina_nn_msgs/OpenPoseRecognize.h>
+#include <vision_msgs/OpenPoseRecognitions.h>
+#include <vision_msgs/OpenPoseRecognize.h>
 
 //Node config
 DEFINE_bool(debug_mode, true, "The debug mode");
@@ -55,14 +55,14 @@ void cameraCallback(const sensor_msgs::ImageConstPtr& msg)
 	std::vector<std::map<int, std::vector<float> > > keyPoints;
 	openPoseEstimator_ptr->framePoseEstimation(cam_image->image, opResult, keyPoints);
 
-	justina_nn_msgs::OpenPoseRecognitions result;	
+	vision_msgs::OpenPoseRecognitions result;	
 	for(int i = 0; i < keyPoints.size(); i++)
 	{
-		justina_nn_msgs::OpenPoseRecognition recognition;
+		vision_msgs::OpenPoseRecognition recognition;
 		std::map<int, std::vector<float> > poses = keyPoints[i];
 		for(std::map<int, std::vector<float> >::iterator it = poses.begin(); it != poses.end(); it++)
 		{
-			justina_nn_msgs::OpenPoseKeyPoint keyPoint;
+			vision_msgs::OpenPoseKeyPoint keyPoint;
 			keyPoint.x = it->second[0];
 			keyPoint.y = it->second[1];
 			keyPoint.score = it->second[2];
@@ -81,7 +81,7 @@ void cameraCallback(const sensor_msgs::ImageConstPtr& msg)
 	if (FLAGS_debug_mode) cv::imshow("Openpose estimation", opResult);
 }
 
-bool recognizeCallback(justina_nn_msgs::OpenPoseRecognize::Request &req, justina_nn_msgs::OpenPoseRecognize::Response &res)
+bool recognizeCallback(vision_msgs::OpenPoseRecognize::Request &req, vision_msgs::OpenPoseRecognize::Response &res)
 {
 	cv_bridge::CvImagePtr cam_image;
 	std_msgs::Header imageHeader_;
@@ -99,11 +99,11 @@ bool recognizeCallback(justina_nn_msgs::OpenPoseRecognize::Request &req, justina
 
 	for(int i = 0; i < keyPoints.size(); i++)
 	{
-		justina_nn_msgs::OpenPoseRecognition recognition;
+		vision_msgs::OpenPoseRecognition recognition;
 		std::map<int, std::vector<float> > poses = keyPoints[i];
 		for(std::map<int, std::vector<float> >::iterator it = poses.begin(); it != poses.end(); it++)
 		{
-			justina_nn_msgs::OpenPoseKeyPoint keyPoint;
+			vision_msgs::OpenPoseKeyPoint keyPoint;
 			keyPoint.x = it->second[0];
 			keyPoint.y = it->second[1];
 			keyPoint.score = it->second[2];
@@ -181,7 +181,7 @@ int main(int argc, char ** argv){
 
 	ros::Subscriber imageSubscriber = nh.subscribe((std::string) FLAGS_rgb_camera_topic, 1, cameraCallback);
 	ros::ServiceServer recognizeService = nh.advertiseService("openpose/recognize", recognizeCallback); 
-	pubResult_ = nh.advertise<justina_nn_msgs::OpenPoseRecognitions>((std::string) FLAGS_result_pose_topic, 1);
+	pubResult_ = nh.advertise<vision_msgs::OpenPoseRecognitions>((std::string) FLAGS_result_pose_topic, 1);
 
 	openPoseEstimator_ptr = new OpenPose();
 	openPoseEstimator_ptr->initOpenPose(modelFoler, poseModel, netResolution, outputSize, numGpuStart, scaleGap, scaleNumber, disableBlending, renderThreshold, alphaPose);

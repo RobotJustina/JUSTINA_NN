@@ -13,8 +13,8 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Point
 from cv_bridge import CvBridge, CvBridgeError
-from justina_nn_msgs.msg import *
-from justina_nn_msgs.srv import *
+from vision_msgs.msg import *
+from vision_msgs.srv import *
 from rospkg import RosPack
 
 from scipy import misc

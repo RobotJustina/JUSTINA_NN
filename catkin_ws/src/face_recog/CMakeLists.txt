@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   cv_bridge
   message_generation
-  justina_nn_msgs
+  vision_msgs
 )
 
 find_package(OpenCV REQUIRED)

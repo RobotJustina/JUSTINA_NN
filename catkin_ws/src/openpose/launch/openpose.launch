@@ -3,11 +3,14 @@
 	<group ns="vision">
 		<node name="openpose_node" pkg="openpose" type="open_pose_node" output="screen">
 			<param name="debug_mode" value="false"/>
+			<param name="publish_image" value="true"/>
+			<param name="frame_rate" value="5"/>
 			<param name="model_folder" value="$(env OPENPOSE_HOME)/models/"/>
 			<!-- This Value is to the old openpose version 1.2 -->
 			<!-- param name="net_resolution" value="480x320"/ -->
 			<param name="net_resolution" value="256x192"/>
 			<param name="model_pose" value="BODY_25"/>
+			<param name="rgb_camera_topic" value="/hardware/webcam_man/image_raw"/>
 			<!-- param name="rgb_camera_topic" value="/usb_cam/image_raw"/ -->
 			<!-- param name="result_pose_topic" value="openpose/result"/ -->
 		</node>

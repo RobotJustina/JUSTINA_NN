@@ -1,4 +1,5 @@
 #include <string>
+#include <iostream>
 
 //OpenCV dependencies
 #include <opencv2/core/core.hpp>

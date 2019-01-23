@@ -57,7 +57,8 @@ def add_overlays(frame, faces):
                     cv2.putText(frame, face.name, (face_bb[0], face_bb[3] - 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0),
                             thickness=1, lineType=1)
-                    cv2.putText(frame, str(face.probability.round(decimals=2)), (face_bb[0], face_bb[3]),
+                    #cv2.putText(frame, str(face.probability.round(decimals=2)), (face_bb[0], face_bb[3]),
+                    cv2.putText(frame, str(round(face.probability, 2)), (face_bb[0], face_bb[3]),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0),
                             thickness=1, lineType=1)
                 else:

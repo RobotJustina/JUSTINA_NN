@@ -1,7 +1,8 @@
 <launch>
 
 	<node name="mask_rcnn_node" type="mask_rcnn_node.py" pkg="mask_rcnn" output="screen">
-		<param name="weights_path" value="/home/biorobotica/Mobile_Mask_RCNN/mobile_mask_rcnn_coco.h5"/>
+		<!-- param name="weights_path" value="/home/biorobotica/Mobile_Mask_RCNN/mobile_mask_rcnn_coco.h5"/ -->
+		<param name="weights_path" value="/home/biorobotica/Mobile_Mask_RCNN/mask_rcnn_coco.h5"/>
 		<param name="logs_path" value="/home/biorobotica/Mobile_Mask_RCNN/logs/"/>
 	</node>
 

@@ -29,79 +29,44 @@ from mmrcnn import coco
 from mmrcnn import visualize
     
 class LikeCocoConfig(Config):
-
-    """Configuration for training on the coco  dataset.
-    Derives from the base Config class and overrides some values.
-    """
     NAME = "LikeCoco"
- 
-    # We use a GPU with 12GB memory, which can fit two images.
-    # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 1
-
-    # Number of classes (including background)
-    NUM_CLASSES = 1 + 4  # Background + balloon
-
-    # Skip detections with < 90% confidence
-    DETECTION_MIN_CONFIDENCE = 0.9
-
-    # All of our training images are 512x512
-    IMAGE_MIN_DIM = 512
-    IMAGE_MAX_DIM = 512
-
-    # Matterport originally used resnet101, but I downsized to fit it on my graphics card
-    BACKBONE = 'mobilenetv1'
-    #BACKBONE = 'resnet50'
-
-    USE_MULTIPROCESSING = True
 
 def main(args):
     rospy.init_node("mask_rcnn_node", anonymous=True)
     rospack = RosPack()
     rate = rospy.Rate(30)
-    
-    weights_path = rospy.get_param("~weights_path")
-    logs_path = rospy.get_param("~logs_path")
+   
+    class_names = rospy.get_param("/mask_rcnn/mask_rcnn_model/class_names")
+    weights_file = rospy.get_param("~weights_path") + rospy.get_param("/mask_rcnn/mask_rcnn_model/weights_name")
+    logs_path = rospy.get_param("~logs_path") + rospy.get_param("/mask_rcnn/mask_rcnn_model/logs_name")
+    name_model = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/NAME")
 
-    nameConfig = "coco"
-     
-    class_names = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
-                           'bus', 'train', 'truck', 'boat', 'traffic light',
-                                          'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird',
-                                                         'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear',
-                                                                        'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie',
-                                                                                       'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
-                                                                                                      'kite', 'baseball bat', 'baseball glove', 'skateboard',
-                                                                                                                     'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup',
-                                                                                                                                    'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
-                                                                                                                                                   'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza',
-                                                                                                                                                                  'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed',
-                                                                                                                                                                                 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
-                                                                                                                                                                                                'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
-                                                                                                                                                                                                               'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
-                                                                                                                                                                                                                              'teddy bear', 'hair drier', 'toothbrush']
+    #class_names = ['BG', 'blue_knife', 'yellow_knife', 'orange_knife', 'green_knife', 'red_knife', 'purple_knife', 'blue_fork', 'yellow_fork', 'orange_fork', 'green_fork', 'red_fork', 'purple_fork', 'blue_spoon', 'yellow_spoon', 'orange_spoon', 'green_spoon', 'red_spoon', 'purple_spoon', 'blue_dish', 'yellow_dish', 'orange_dish', 'green_dish', 'red_dish', 'purple_dish', 'blue_bowl', 'yellow_bowl', 'orange_bowl', 'green_bowl', 'red_bowl', 'purple_bowl', 'blue_glass', 'yellow_glass', 'orange_glass', 'green_glass', 'red_glass', 'purple_glass']
+    # class_names = ['BG', 'cereal', 'papikra', 'pringles' , 'potato_chips', 'chocolate_drink', 'coke', 'grape_juice', 'orange_juice', 'tray']
 
-
-    config = coco.CocoConfig();
-    #config = LikeCocoConfig()
+    if name_model == 'coco':
+        config = coco.CocoConfig()
+    else:
+        config = LikeCocoConfig()
 
     class InferenceConfig(config.__class__):
-        NAME = nameConfig
 
-	"""Base configuration class. For custom configurations, create a
-    	sub-class that inherits from this one and override properties
-    	that need to be changed.
-    	"""
     	# Name the configurations. For example, 'COCO', 'Experiment 3', ...etc.
     	# Useful if your code needs to do things differently depending on which
     	# experiment is running.
+    	NAME = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/NAME")  # Override in sub-classes
+
+    	# NUMBER OF GPUs to use. For CPU training, use 1
+    	GPU_COUNT = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/GPU_COUNT")
+
+    	# Use Multiprocessing in MaskRCNN.train()
+    	USE_MULTIPROCESSING = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/USE_MULTIPROCESSING")
 
     	# Number of images to train with on each GPU. A 12GB GPU can typically
     	# handle 2 images of 1024x1024px.
     	# Adjust based on your GPU memory and image sizes. Use the highest
     	# number that your GPU can handle for best performance.
-    	IMAGES_PER_GPU = 1
-	GPU_COUNT = 1
+    	IMAGES_PER_GPU = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/IMAGES_PER_GPU")
 
     	# Number of training steps per epoch
     	# This doesn't need to match the size of the training set. Tensorboard
@@ -110,69 +75,68 @@ def main(args):
     	# Validation stats are also calculated at each epoch end and they
     	# might take a while, so don't set this too small to avoid spending
     	# a lot of time on validation stats.
-    	STEPS_PER_EPOCH = 1000
+    	STEPS_PER_EPOCH = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/STEPS_PER_EPOCH")
 
     	# Number of validation steps to run at the end of every training epoch.
     	# A bigger number improves accuracy of validation stats, but slows
     	# down the training.
-    	VALIDATION_STEPS = 50
+    	VALIDATION_STEPS = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/VALIDATION_STEPS")
 
-    	# Backbone network architecture
-    	# Supported values are: resnet50, resnet101.
-    	# You can also provide a callable that should have the signature
-    	# of model.resnet_graph. If you do so, you need to supply a callable
-    	# to COMPUTE_BACKBONE_SHAPE as well
-    	BACKBONE = "resnet101"
+    	# Backbone Architecture,
+    	# Currently supported: ['resnet50','resnet101', 'mobilenetv1','mobilenetv2']
+    	BACKBONE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/BACKBONE") # Override in sub-classes
 
-    	# Only useful if you supply a callable to BACKBONE. Should compute
+	# Only useful if you supply a callable to BACKBONE. Should compute
     	# the shape of each layer of the FPN Pyramid.
     	# See model.compute_backbone_shapes
-    	COMPUTE_BACKBONE_SHAPE = None
+    	COMPUTE_BACKBONE_SHAPE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/COMPUTE_BACKBONE_SHAPE")
 
     	# The strides of each layer of the FPN Pyramid. These values
     	# are based on a Resnet101 backbone.
-    	BACKBONE_STRIDES = [4, 8, 16, 32, 64]
+    	BACKBONE_STRIDES = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/BACKBONE_STRIDES") #resnet
 
-    	# Size of the fully-connected layers in the classification graph
-    	FPN_CLASSIF_FC_LAYERS_SIZE = 1024
+    	# Number of classification classes (including background)
+    	NUM_CLASSES = 1 + rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/NUM_CLASSES") # Override in sub-classes
 
-    	# Size of the top-down layers used to build the feature pyramid
-    	TOP_DOWN_PYRAMID_SIZE = 256
+	# Size of the fully-connected layers in the classification graph
+        FPN_CLASSIF_FC_LAYERS_SIZE =  rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/FPN_CLASSIF_FC_LAYERS_SIZE")
 
+	# Size of the top-down layers used to build the feature pyramid
+    	TOP_DOWN_PYRAMID_SIZE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/TOP_DOWN_PYRAMID_SIZE")
 
     	# Length of square anchor side in pixels
-    	RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
+    	RPN_ANCHOR_SCALES = (rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_ANCHOR_SCALES")[0], rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_ANCHOR_SCALES")[1], rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_ANCHOR_SCALES")[2], rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_ANCHOR_SCALES")[3], rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_ANCHOR_SCALES")[4])
 
     	# Ratios of anchors at each cell (width/height)
     	# A value of 1 represents a square anchor, and 0.5 is a wide anchor
-    	RPN_ANCHOR_RATIOS = [0.5, 1, 2]
+    	RPN_ANCHOR_RATIOS = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_ANCHOR_RATIOS")
 
     	# Anchor stride
     	# If 1 then anchors are created for each cell in the backbone feature map.
     	# If 2, then anchors are created for every other cell, and so on.
-    	RPN_ANCHOR_STRIDE = 1
+    	RPN_ANCHOR_STRIDE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_ANCHOR_STRIDE")
 
     	# Non-max suppression threshold to filter RPN proposals.
     	# You can increase this during training to generate more propsals.
-    	RPN_NMS_THRESHOLD = 0.7
+    	RPN_NMS_THRESHOLD = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_NMS_THRESHOLD")
 
     	# How many anchors per image to use for RPN training
-    	RPN_TRAIN_ANCHORS_PER_IMAGE = 256
-    
-    	# ROIs kept after tf.nn.top_k and before non-maximum suppression
-    	PRE_NMS_LIMIT = 6000
+    	RPN_TRAIN_ANCHORS_PER_IMAGE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_TRAIN_ANCHORS_PER_IMAGE")
 
-    	# ROIs kept after non-maximum suppression (training and inference)
-    	POST_NMS_ROIS_TRAINING = 2000
-    	POST_NMS_ROIS_INFERENCE = 1000
+	# ROIs kept after tf.nn.top_k and before non-maximum suppression
+	PRE_NMS_LIMIT = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/PRE_NMS_LIMIT")
+
+    	# ROIs kept after non-maximum supression (training and inference)
+    	POST_NMS_ROIS_TRAINING = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/POST_NMS_ROIS_TRAINING")
+    	POST_NMS_ROIS_INFERENCE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/POST_NMS_ROIS_INFERENCE")
 
     	# If enabled, resizes instance masks to a smaller size to reduce
     	# memory load. Recommended when using high-resolution images.
-    	USE_MINI_MASK = True
-    	MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
+    	USE_MINI_MASK = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/USE_MINI_MASK")
+    	MINI_MASK_SHAPE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/MINI_MASK_SHAPE")  # (height, width) of the mini-mask
 
     	# Input image resizing
-    	# Generally, use the "square" resizing mode for training and predicting
+    	# Generally, use the "square" resizing mode for training and inferencing
     	# and it should work well in most cases. In this mode, images are scaled
     	# up such that the small side is = IMAGE_MIN_DIM, but ensuring that the
     	# scaling doesn't make the long side > IMAGE_MAX_DIM. Then the image is
@@ -191,66 +155,62 @@ def main(args):
     	#         on IMAGE_MIN_DIM and IMAGE_MIN_SCALE, then picks a random crop of
     	#         size IMAGE_MIN_DIM x IMAGE_MIN_DIM. Can be used in training only.
     	#         IMAGE_MAX_DIM is not used in this mode.
-    	IMAGE_RESIZE_MODE = "square"
-    	IMAGE_MIN_DIM = 800
-    	IMAGE_MAX_DIM = 1024
+    	IMAGE_RESIZE_MODE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/IMAGE_RESIZE_MODE")
+    	IMAGE_MIN_DIM = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/IMAGE_MIN_DIM")
+    	IMAGE_MAX_DIM = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/IMAGE_MAX_DIM")
     	# Minimum scaling ratio. Checked after MIN_IMAGE_DIM and can force further
     	# up scaling. For example, if set to 2 then images are scaled up to double
     	# the width and height, or more, even if MIN_IMAGE_DIM doesn't require it.
-    	# However, in 'square' mode, it can be overruled by IMAGE_MAX_DIM.
-    	IMAGE_MIN_SCALE = 0
-    	# Number of color channels per image. RGB = 3, grayscale = 1, RGB-D = 4
-    	# Changing this requires other changes in the code. See the WIKI for more
-    	# details: https://github.com/matterport/Mask_RCNN/wiki
-    	IMAGE_CHANNEL_COUNT = 3
+    	# Howver, in 'square' mode, it can be overruled by IMAGE_MAX_DIM.
+    	IMAGE_MIN_SCALE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/IMAGE_MIN_SCALE")
 
     	# Image mean (RGB)
-    	MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+    	MEAN_PIXEL = np.array(rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/MEAN_PIXEL"))
 
     	# Number of ROIs per image to feed to classifier/mask heads
     	# The Mask RCNN paper uses 512 but often the RPN doesn't generate
     	# enough positive proposals to fill this and keep a positive:negative
     	# ratio of 1:3. You can increase the number of proposals by adjusting
     	# the RPN NMS threshold.
-    	TRAIN_ROIS_PER_IMAGE = 200
+    	TRAIN_ROIS_PER_IMAGE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/TRAIN_ROIS_PER_IMAGE")
 
     	# Percent of positive ROIs used to train classifier/mask heads
-    	ROI_POSITIVE_RATIO = 0.33
+    	ROI_POSITIVE_RATIO = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/ROI_POSITIVE_RATIO")
 
     	# Pooled ROIs
-    	POOL_SIZE = 7
-    	MASK_POOL_SIZE = 14
+    	POOL_SIZE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/POOL_SIZE")
+    	MASK_POOL_SIZE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/MASK_POOL_SIZE")
 
     	# Shape of output mask
     	# To change this you also need to change the neural network mask branch
-    	MASK_SHAPE = [28, 28]
+    	MASK_SHAPE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/MASK_SHAPE")
 
     	# Maximum number of ground truth instances to use in one image
-    	MAX_GT_INSTANCES = 100
+    	MAX_GT_INSTANCES = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/MAX_GT_INSTANCES")
 
     	# Bounding box refinement standard deviation for RPN and final detections.
-    	RPN_BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
-    	BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
+    	RPN_BBOX_STD_DEV = np.array(rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/RPN_BBOX_STD_DEV"))
+    	BBOX_STD_DEV = np.array(rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/BBOX_STD_DEV"))
 
     	# Max number of final detections
-    	DETECTION_MAX_INSTANCES = 100
+    	DETECTION_MAX_INSTANCES = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/DETECTION_MAX_INSTANCES")
 
     	# Minimum probability value to accept a detected instance
     	# ROIs below this threshold are skipped
-    	DETECTION_MIN_CONFIDENCE = 0.7
+    	DETECTION_MIN_CONFIDENCE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/DETECTION_MIN_CONFIDENCE")
 
     	# Non-maximum suppression threshold for detection
-    	DETECTION_NMS_THRESHOLD = 0.3
+    	DETECTION_NMS_THRESHOLD = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/DETECTION_NMS_THRESHOLD")
 
     	# Learning rate and momentum
     	# The Mask RCNN paper uses lr=0.02, but on TensorFlow it causes
-    	# weights to explode. Likely due to differences in optimizer
+    	# weights to explode. Likely due to differences in optimzer
     	# implementation.
-    	LEARNING_RATE = 0.001
-    	LEARNING_MOMENTUM = 0.9
+    	LEARNING_RATE = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/LEARNING_RATE")
+    	LEARNING_MOMENTUM = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/LEARNING_MOMENTUM")
 
     	# Weight decay regularization
-    	WEIGHT_DECAY = 0.0001
+    	WEIGHT_DECAY = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/WEIGHT_DECAY")
 
     	# Loss weights for more precise optimization.
     	# Can be used for R-CNN training setup.
@@ -267,24 +227,42 @@ def main(args):
     	# the head branches on ROI generated by code rather than the ROIs from
     	# the RPN. For example, to debug the classifier head without having to
     	# train the RPN.
-    	USE_RPN_ROIS = True
+    	USE_RPN_ROIS = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/USE_RPN_ROIS")
 
     	# Train or freeze batch normalization layers
     	#     None: Train BN layers. This is the normal mode
     	#     False: Freeze BN layers. Good when using a small batch size
-    	#     True: (don't use). Set layer in training mode even when predicting
-    	TRAIN_BN = False  # Defaulting to False since batch size is often small
+    	#     True: (don't use). Set layer in training mode even when inferencing
+    	TRAIN_BN = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/TRAIN_BN")  # Defaulting to False since batch size is often small
 
     	# Gradient norm clipping
-    	GRADIENT_CLIP_NORM = 5.0
-        DETECTION_MIN_CONFIDENCE = 0.85
-	BATCH_SIZE = 1
+    	GRADIENT_CLIP_NORM = rospy.get_param("/mask_rcnn/mask_rcnn_model/mask_rcnn_configs/GRADIENT_CLIP_NORM")
+
+    	#NAME = "tableware"
+    	#IMAGES_PER_GPU = 1
+    	#GPU_COUNT = 1
+    	#NUM_CLASSES = 1 + 9  # COCO has 80 classes (1+80)
+    	#BACKBONE = "mobilenetv1"
+    	#BACKBONE_STRIDES = [4, 8, 16, 32, 64] #ResNet
+    	##BACKBONE_STRIDES = [2, 4, 8, 16, 32]
+    	##RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256) #ResNet
+    	#RPN_ANCHOR_SCALES = (8 , 16, 32, 64, 128)
+    	#MINI_MASK_SHAPE = (56, 56) #ResNet
+    	##MINI_MASK_SHAPE = (28, 28)
+    	##IMAGE_MIN_DIM = 400
+    	#IMAGE_MAX_DIM = 512
+    	##TRAIN_ROIS_PER_IMAGE = 200 #ResNet
+    	##TRAIN_ROIS_PER_IMAGE = 128
+    	# Use Multiprocessing in MaskRCNN.train()
+    	#USE_MULTIPROCESSING = True
+	#DETECTION_MIN_CONFIDENCE = 0.85
+
  
     config = InferenceConfig()
     config.display()
     
     model = modellib.MaskRCNN(mode="inference", config=config, model_dir=logs_path)
-    model.load_weights(weights_path, by_name=True)
+    model.load_weights(weights_file, by_name=True)
 
     while not rospy.is_shutdown() and rosgraph.is_master_online():
         print("Waiting for image\n")
@@ -293,7 +271,8 @@ def main(args):
             img_np_arr = np.fromstring(img.data, np.uint8)
             encoded_img = cv2.imdecode(img_np_arr, 1)
             #encoded_img = cv2.cvtColor(encoded_img, cv2.COLOR_BGR2RGB) 
-            results = model.detect([encoded_img], verbose=1)
+            results = model.detect([cv2.cvtColor(encoded_img, cv2.COLOR_BGR2RGB)], verbose=1)
+            #results = model.detect([encoded_img], verbose=1)
 
             r = results[0]
             print(len(r))

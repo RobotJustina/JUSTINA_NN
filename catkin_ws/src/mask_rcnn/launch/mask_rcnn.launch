@@ -1,13 +1,14 @@
 <launch>
+	<group ns="vision">
+		<arg name="mask_rcnn_weights_path" default="$(env HOME)/Mobile_Mask_RCNN/"/>
+		<arg name="mask_rcnn_logs_path" default="$(env HOME)/Mobile_Mask_RCNN/"/>
 
-	<arg name="mask_rcnn_weights_path" default="$(env HOME)/Mobile_Mask_RCNN/"/>
-	<arg name="mask_rcnn_logs_path" default="$(env HOME)/logs/"/>
+		<rosparam command="load" ns="mask_rcnn" file="$(find mask_rcnn)/config/mask_rcnn_resnet50_objects2019.yaml"/>
 
-	<rosparam command="load" ns="mask_rcnn" file="$(find mask_rcnn)/config/biorobotica2019_rcnn_mobilenetv1_coco.yaml"/>
-
-	<node name="mask_rcnn_node" type="mask_rcnn_node.py" pkg="mask_rcnn" output="screen">
-		<param name="weights_path" value="$(arg mask_rcnn_weights_path)"/>
-		<param name="logs_path" value="$(arg mask_rcnn_weights_path)"/>
-	</node>
+		<node name="mask_rcnn_node" type="mask_rcnn_node.py" pkg="mask_rcnn" output="screen">
+			<param name="weights_path" value="$(arg mask_rcnn_weights_path)"/>
+			<param name="logs_path" value="$(arg mask_rcnn_weights_path)"/>
+		</node>
+	</group>
 
 </launch>

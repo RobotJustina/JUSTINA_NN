@@ -6,7 +6,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   sensor_msgs
-  message_generation)
+  message_generation
+)
 
 ## Generate messages in the 'msg' folder
 add_message_files(
@@ -16,6 +17,8 @@ add_message_files(
 	OpenPoseKeyPoint.msg
 	OpenPoseRecognition.msg
 	OpenPoseRecognitions.msg
+	MaskBoundingBox.msg
+	MaskBoundingBoxes.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -23,6 +26,7 @@ add_service_files(
 	FILES
 	FaceRecognition.srv
 	OpenPoseRecognize.srv
+	ObjectRecognize.srv
 )
 
 ## Generate actions in the 'action' folder
